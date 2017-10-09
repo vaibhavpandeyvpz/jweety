@@ -1,0 +1,36 @@
+{
+  "authors": [
+    {
+      "name": "Vaibhav Pandey",
+      "email": "contact@vaibhavpandey.com"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "Jweety\\": "src/"
+    }
+  },
+  "autoload-dev": {
+    "psr-4": {
+      "Jweety\\": "tests/"
+    }
+  },
+  "config": {
+    "sort-packages": true
+  },
+  "description": "Simple JWT (RFC 7519) encoding/decoding and validation library, for PHP >= 5.3.",
+  "homepage": "http://vaibhavpandeyvpz.github.io/jweety",
+  "keywords": ["jwt", "json web token", "authentication"],
+  "license": "MIT",
+  "name": "vaibhavpandeyvpz/jweety",
+  "require": {
+    "php": "^5.3||^7.0"
+  },
+  "require-dev": {
+    "phpunit/phpunit": "^5.0||^6.0"
+  },
+  "suggest": {
+    "symfony/polyfill-php56": "For using hash_equals(...) on ancient PHP versions."
+  },
+  "type": "library"
+}
