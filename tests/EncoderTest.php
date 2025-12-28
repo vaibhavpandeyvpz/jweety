@@ -643,4 +643,116 @@ class EncoderTest extends TestCase
         $method->setAccessible(true);
         $method->invoke($encoder, 'payload', 'INVALID_ALG');
     }
+
+    // Clock tests
+
+    public function test_assert_with_clock(): void
+    {
+        if (!class_exists(\Samay\FrozenClock::class)) {
+            $this->markTestSkipped('vaibhavpandeyvpz/samay is not installed');
+        }
+
+        $clockTime = new \DateTimeImmutable('2024-01-01 12:00:00');
+        $clock = new \Samay\FrozenClock($clockTime);
+        $encoder = new Encoder('12345678', [Algorithm::HS256], $clock);
+
+        $clockTimestamp = $clockTime->getTimestamp();
+
+        // Claims valid at the clock time
+        $claims = (object) [
+            'sub' => 'user123',
+            'exp' => $clockTimestamp + 3600, // 1 hour later
+            'iat' => $clockTimestamp - 3600, // 1 hour earlier
+            'nbf' => $clockTimestamp - 7200, // 2 hours earlier
+        ];
+
+        $encoder->assert($claims);
+        $this->assertTrue(true);
+    }
+
+    public function test_assert_expired_with_clock(): void
+    {
+        if (!class_exists(\Samay\FrozenClock::class)) {
+            $this->markTestSkipped('vaibhavpandeyvpz/samay is not installed');
+        }
+
+        $clockTime = new \DateTimeImmutable('2024-01-01 12:00:00');
+        $clock = new \Samay\FrozenClock($clockTime);
+        $encoder = new Encoder('12345678', [Algorithm::HS256], $clock);
+
+        $clockTimestamp = $clockTime->getTimestamp();
+
+        // Token expired 1 hour ago
+        $claims = (object) [
+            'sub' => 'user123',
+            'exp' => $clockTimestamp - 3600, // 1 hour before clock time
+        ];
+
+        $this->expectException(TokenExpiredException::class);
+        $encoder->assert($claims);
+    }
+
+    public function test_parse_with_clock(): void
+    {
+        if (!class_exists(\Samay\FrozenClock::class)) {
+            $this->markTestSkipped('vaibhavpandeyvpz/samay is not installed');
+        }
+
+        $clockTime = new \DateTimeImmutable('2024-01-01 12:00:00');
+        $clock = new \Samay\FrozenClock($clockTime);
+        $encoder = new Encoder('12345678', [Algorithm::HS256], $clock);
+
+        $clockTimestamp = $clockTime->getTimestamp();
+
+        // Create token with expiration in the future relative to clock
+        $claims = [
+            'sub' => 'user123',
+            'exp' => $clockTimestamp + 3600, // 1 hour later
+            'iat' => $clockTimestamp - 3600, // 1 hour earlier
+        ];
+
+        $token = $encoder->stringify($claims);
+        $parsed = $encoder->parse($token);
+
+        $this->assertEquals('user123', $parsed->sub);
+    }
+
+    public function test_parse_expired_token_with_clock(): void
+    {
+        if (!class_exists(\Samay\FrozenClock::class)) {
+            $this->markTestSkipped('vaibhavpandeyvpz/samay is not installed');
+        }
+
+        $clockTime = new \DateTimeImmutable('2024-01-01 12:00:00');
+        $clock = new \Samay\FrozenClock($clockTime);
+        $encoder = new Encoder('12345678', [Algorithm::HS256], $clock);
+
+        $clockTimestamp = $clockTime->getTimestamp();
+
+        // Create token that expired 1 hour ago
+        $claims = [
+            'sub' => 'user123',
+            'exp' => $clockTimestamp - 3600, // 1 hour before clock time (expired)
+            'iat' => $clockTimestamp - 7200, // 2 hours before clock time
+        ];
+
+        $token = $encoder->stringify($claims);
+
+        $this->expectException(TokenExpiredException::class);
+        $encoder->parse($token);
+    }
+
+    public function test_clock_fallback_to_system_time(): void
+    {
+        // Test that without clock, it uses system time
+        $encoder = new Encoder('12345678');
+        $claims = (object) [
+            'exp' => time() + 3600,
+            'iat' => time() - 3600,
+            'nbf' => time() - 1800,
+        ];
+
+        $encoder->assert($claims);
+        $this->assertTrue(true);
+    }
 }

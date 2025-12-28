@@ -16,6 +16,7 @@ use Jweety\Exception\InvalidSignatureException;
 use Jweety\Exception\InvalidTokenException;
 use Jweety\Exception\TokenExpiredException;
 use Jweety\Exception\UnsupportedAlgorithmException;
+use Psr\Clock\ClockInterface;
 
 /**
  * JWT Encoder class for encoding, decoding, and validating JSON Web Tokens (RFC 7519)
@@ -45,6 +46,13 @@ class Encoder implements EncoderInterface
     private readonly array $algorithms;
 
     /**
+     * Clock interface for time-based claim validation
+     *
+     * @var ClockInterface|null
+     */
+    private readonly ?ClockInterface $clock;
+
+    /**
      * Encoder constructor
      *
      * Initializes the encoder with a secret key and optionally configures
@@ -57,18 +65,23 @@ class Encoder implements EncoderInterface
      *                                                                Can be a single algorithm (enum or string), or an array
      *                                                                of algorithms. Defaults to all supported algorithms
      *                                                                (HS256, HS384, HS512).
+     * @param  ClockInterface|null  $clock  Optional PSR-20 clock implementation for time-based
+     *                                       claim validation. If not provided, uses system time via time().
+     *                                       Useful for testing with controllable time.
      *
      * @example
      * $encoder = new Encoder('my-secret-key');
      * $encoder = new Encoder('my-secret-key', Algorithm::HS256);
-     * $encoder = new Encoder('my-secret-key', ['HS256', 'HS384']);
+     * $encoder = new Encoder('my-secret-key', ['HS256', 'HS384'], $clock);
      */
     public function __construct(
         #[\SensitiveParameter]
         private readonly string $key,
-        array|Algorithm|string $algorithms = [Algorithm::HS256, Algorithm::HS384, Algorithm::HS512]
+        array|Algorithm|string $algorithms = [Algorithm::HS256, Algorithm::HS384, Algorithm::HS512],
+        ?ClockInterface $clock = null
     ) {
         $this->algorithms = $this->normalizeAlgorithms($algorithms);
+        $this->clock = $clock;
     }
 
     /**
@@ -103,6 +116,8 @@ class Encoder implements EncoderInterface
      * - iat (issued at): Token must not be issued in the future
      * - nbf (not before): Token must be usable at the current time
      *
+     * Uses the configured PSR-20 clock if provided, otherwise falls back to system time.
+     *
      * @param  object  $claims  The decoded JWT claims object
      *
      * @throws TokenExpiredException When the token has expired (exp claim is in the past)
@@ -115,7 +130,7 @@ class Encoder implements EncoderInterface
      */
     public function assert(object $claims): void
     {
-        $now = time();
+        $now = $this->getCurrentTime();
 
         if (isset($claims->exp) && $now >= $claims->exp) {
             throw new TokenExpiredException(
@@ -134,6 +149,20 @@ class Encoder implements EncoderInterface
                 sprintf("Provided JWT cannot be used before '%s'.", date(DATE_ISO8601, $claims->nbf))
             );
         }
+    }
+
+    /**
+     * Get the current timestamp
+     *
+     * Uses the configured PSR-20 clock if available, otherwise falls back to system time.
+     *
+     * @return int Current Unix timestamp
+     *
+     * @internal This method is used internally for time-based claim validation
+     */
+    private function getCurrentTime(): int
+    {
+        return $this->clock?->now()->getTimestamp() ?? time();
     }
 
     /**

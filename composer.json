@@ -30,10 +30,12 @@
   "license": "MIT",
   "name": "vaibhavpandeyvpz/jweety",
   "require": {
-    "php": "^8.2"
+    "php": "^8.2",
+    "psr/clock": "^1.0"
   },
   "require-dev": {
-    "phpunit/phpunit": "^10.0"
+    "phpunit/phpunit": "^10.0",
+    "vaibhavpandeyvpz/samay": "^1.0"
   },
   "type": "library"
 }

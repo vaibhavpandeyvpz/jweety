@@ -15,6 +15,7 @@ A simple, modern [JWT](https://jwt.io/) ([RFC 7519](https://tools.ietf.org/html/
 - ✅ **HMAC Algorithms** - Supports HS256, HS384, and HS512
 - ✅ **Type Safe** - Comprehensive type hints and strict types
 - ✅ **Claim Validation** - Automatic validation of `exp`, `iat`, and `nbf` claims
+- ✅ **PSR-20 Clock Support** - Use any PSR-20 clock implementation for testable time-based validation
 - ✅ **Exception Handling** - Specific exception types for different error scenarios
 - ✅ **100% Test Coverage** - Fully tested with comprehensive test suite
 
@@ -124,6 +125,28 @@ $encoder = new Encoder('your-secret-key', [Algorithm::HS256, Algorithm::HS384]);
 $encoder = new Encoder('your-secret-key', ['HS256', 'HS512']);
 ```
 
+### Using PSR-20 Clock for Testing
+
+The library supports PSR-20 Clock implementations for controllable time in tests:
+
+```php
+use Jweety\Encoder;
+use Samay\FrozenClock; // or any PSR-20 Clock implementation
+
+// Create a frozen clock for testing
+$clock = new FrozenClock(new \DateTimeImmutable('2024-01-01 12:00:00'));
+$encoder = new Encoder('your-secret-key', [Algorithm::HS256], $clock);
+
+// Now all time-based validations use the frozen time
+$claims = [
+    'sub' => 'user123',
+    'exp' => $clock->now()->getTimestamp() + 3600, // 1 hour from frozen time
+];
+
+$token = $encoder->stringify($claims);
+$parsed = $encoder->parse($token); // Uses frozen clock for validation
+```
+
 ### Custom Token Type
 
 ```php
@@ -193,12 +216,14 @@ $token = $encoder->stringify($claims);
 public function __construct(
     #[\SensitiveParameter]
     string $key,
-    array|Algorithm|string $algorithms = [Algorithm::HS256, Algorithm::HS384, Algorithm::HS512]
+    array|Algorithm|string $algorithms = [Algorithm::HS256, Algorithm::HS384, Algorithm::HS512],
+    ?ClockInterface $clock = null
 )
 ```
 
 - `$key` - Secret key for HMAC signing (marked as sensitive)
 - `$algorithms` - Allowed algorithms (defaults to all supported)
+- `$clock` - Optional PSR-20 Clock implementation for time-based claim validation. If not provided, uses system time via `time()`. Useful for testing with controllable time.
 
 #### Methods
 
