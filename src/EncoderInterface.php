@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 /*
  * This file is part of vaibhavpandeyvpz/jweety package.
  *
@@ -11,26 +13,45 @@
 namespace Jweety;
 
 /**
- * Interface EncoderInterface
- * @package Jweety
+ * Interface for JWT encoding and decoding operations
+ *
+ * This interface defines the contract for classes that implement JWT (JSON Web Token)
+ * encoding and decoding functionality according to RFC 7519.
+ *
+ * @author Vaibhav Pandey <contact@vaibhavpandey.com>
+ *
+ * @since 1.0.0
  */
 interface EncoderInterface
 {
     /**
-     * @param string $token
-     * @param boolean $assert
-     * @return object
-     * @throws \RuntimeException
-     * @throws \InvalidArgumentException
+     * Parse and validate a JWT token
+     *
+     * Decodes a JWT token string, verifies its signature, and optionally validates
+     * its claims against standard JWT claim rules.
+     *
+     * @param  string  $token  The JWT token string to parse
+     * @param  bool  $assert  Whether to validate claims (exp, iat, nbf). Defaults to true.
+     * @return object The decoded claims object
+     *
+     * @throws \Jweety\Exception\InvalidTokenException When the token is malformed or invalid
+     * @throws \Jweety\Exception\InvalidSignatureException When signature verification fails
+     * @throws \Jweety\Exception\TokenExpiredException When the token has expired (if $assert is true)
      */
-    public function parse($token, $assert = true);
+    public function parse(string $token, bool $assert = true): object;
 
     /**
-     * @param array|object $claims
-     * @param string $alg
-     * @param string $typ
-     * @return string
-     * @throws \InvalidArgumentException
+     * Create a JWT token from claims
+     *
+     * Encodes the provided claims into a JWT token string with proper header,
+     * payload, and signature components.
+     *
+     * @param  array|object  $claims  The claims to encode into the token
+     * @param  Algorithm|string  $alg  The signature algorithm to use. Defaults to HS256.
+     * @param  string  $typ  The token type identifier. Defaults to 'JWT'.
+     * @return string The encoded JWT token string
+     *
+     * @throws \Jweety\Exception\UnsupportedAlgorithmException When the algorithm is not supported
      */
-    public function stringify($claims, $alg = 'HS256', $typ = 'JWT');
+    public function stringify(array|object $claims, Algorithm|string $alg = Algorithm::HS256, string $typ = 'JWT'): string;
 }
